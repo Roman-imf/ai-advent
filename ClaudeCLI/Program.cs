@@ -23,7 +23,7 @@ class Program
             }
 
             // Парсим аргументы командной строки
-            var (message, model, maxTokens, temperature) = ParseArguments(args);
+            var (message, model, maxTokens, temperature, instructionType) = ParseArguments(args);
 
             // Создаем клиент с API ключом из .env
             AnthropicClient client = new() { ApiKey = apiKey };
@@ -38,6 +38,13 @@ class Program
             var selectedMaxTokens = maxTokens ?? defaultMaxTokens;
             var selectedTemperature = temperature ?? defaultTemperature;
 
+            message = instructionType switch
+            {
+                InstructionType.Aggressive => $"{message}. Сформулируй ответ максимально коротко и даже агрессивно",
+                InstructionType.Polite => $"{message}. В ответе будь максимально вежлив, пиши детально не пропуская мелочей",
+                null => message,
+            };
+
             await SendSingleMessage(client, message, selectedModel, selectedMaxTokens, selectedTemperature);
         }
         catch (Exception ex)
@@ -46,13 +53,14 @@ class Program
         }
     }
 
-    static (string? message, string? model, int? maxTokens, double? temperature)
+    static (string? message, string? model, int? maxTokens, double? temperature, InstructionType? instructionType)
         ParseArguments(string[] args)
     {
         string? message = null;
         string? model = null;
         int? maxTokens = null;
         double? temperature = null;
+        InstructionType? instructionType = null;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -82,6 +90,11 @@ class Program
                     Environment.Exit(0);
                     break;
 
+                case "-i":
+                case "--instructions":
+                    instructionType = (InstructionType)int.Parse(args[++i]);
+                    break;
+
                 default:
                     // Если аргумент не начинается с "-", считаем его сообщением
                     if (!args[i].StartsWith("-"))
@@ -96,7 +109,7 @@ class Program
             }
         }
 
-        return (message, model, maxTokens, temperature);
+        return (message, model, maxTokens, temperature, instructionType);
     }
 
     static void ShowHelp()
@@ -160,11 +173,15 @@ class Program
     }
 }
 
+internal enum InstructionType
+{
+    Polite = 1,
+    Aggressive = 2
+}
+
 public class ClaudeResponse
 {
-    [JsonPropertyName("type")]
-    public string Type { get; set; }
-    
-    [JsonPropertyName("text")]
-    public string Text { get; set; }
+    [JsonPropertyName("type")] public string Type { get; set; }
+
+    [JsonPropertyName("text")] public string Text { get; set; }
 }
