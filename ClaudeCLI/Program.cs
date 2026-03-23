@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Diagnostics;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Anthropic;
 using Anthropic.Models.Messages;
@@ -29,7 +30,7 @@ class Program
             AnthropicClient client = new() { ApiKey = apiKey };
 
             // Получаем параметры из .env или используем значения по умолчанию
-            var defaultModel = Environment.GetEnvironmentVariable("CLAUDE_MODEL") ?? "claude-haiku-4-5-20251001";
+            var defaultModel = Environment.GetEnvironmentVariable("CLAUDE_MODEL") ?? "haiku";
             var defaultMaxTokens = int.Parse(Environment.GetEnvironmentVariable("CLAUDE_MAX_TOKENS") ?? "1024");
             var defaultTemperature = double.Parse(Environment.GetEnvironmentVariable("CLAUDE_TEMPERATURE") ?? "0,7");
 
@@ -41,7 +42,8 @@ class Program
             message = instructionType switch
             {
                 InstructionType.Aggressive => $"{message}. Сформулируй ответ максимально коротко и даже агрессивно",
-                InstructionType.Polite => $"{message}. В ответе будь максимально вежлив, пиши детально не пропуская мелочей",
+                InstructionType.Polite =>
+                    $"{message}. В ответе будь максимально вежлив, пиши детально не пропуская мелочей",
                 null => message,
             };
 
@@ -77,6 +79,7 @@ class Program
                     if (i + 1 < args.Length && int.TryParse(args[++i], out int tokens))
                         maxTokens = tokens;
                     break;
+
 
                 case "-temp":
                 case "--temperature":
@@ -138,7 +141,14 @@ class Program
     static async Task SendSingleMessage(AnthropicClient client, string message, string model, int maxTokens,
         double temperature)
     {
-        Console.WriteLine($"Отправка запроса к модели: {model}");
+        var models = new Dictionary<string, string>
+        {
+            { "haiku", "claude-haiku-4-5" },
+            { "sonnet", "claude-sonnet-4-5" },
+            { "opus", "claude-opus-4-6" },
+        };
+
+        Console.WriteLine($"Отправка запроса к модели: {models[model]}");
         Console.WriteLine($"Макс. токенов: {maxTokens}, Температура: {temperature}");
         Console.WriteLine($"Текст: {message}");
         Console.WriteLine(new string('-', 50));
@@ -155,16 +165,31 @@ class Program
                     Content = message,
                 },
             ],
-            Model = model,
+            Model = models[model],
         };
 
         try
         {
+            var sw = new Stopwatch();
+            sw.Start();
             var response = await client.Messages.Create(parameters);
+            sw.Stop();
             Console.WriteLine("Ответ Claude:");
             Console.WriteLine(new string('-', 50));
             var a = JsonSerializer.Deserialize<ClaudeResponse>(response.Content.First().Json.GetRawText());
             Console.WriteLine(a.Text);
+            Console.WriteLine(new string('-', 50));
+            var costs = new Dictionary<string, (decimal Input, decimal Output)>
+            {
+                { "haiku", (Input: 1 / (decimal)1000000, Output: 5 / (decimal)1000000) },
+                { "sonnet", (Input: 3 / (decimal)1000000, Output: 15 / (decimal)1000000) },
+                { "opus", (Input: 5 / (decimal)1000000, Output: 25 / (decimal)1000000) }
+            };
+            Console.WriteLine(
+                $"Время запроса {sw.Elapsed}, " +
+                $"Входящие токены: {response.Usage.InputTokens}, " +
+                $"Исходящие токены: {response.Usage.OutputTokens}, " +
+                $"Стоимость: {(response.Usage.InputTokens * costs[model].Input) + (response.Usage.OutputTokens * costs[model].Output)}");
         }
         catch (Exception ex)
         {
