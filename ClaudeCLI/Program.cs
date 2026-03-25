@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Anthropic;
@@ -147,6 +148,13 @@ class Program
             { "sonnet", "claude-sonnet-4-5" },
             { "opus", "claude-opus-4-6" },
         };
+        var history = new StringBuilder();
+        if (!File.Exists("history.txt"))
+            history.AppendLine("История запросов:");
+        else
+            history.Append(await File.ReadAllTextAsync("history.txt"));
+
+        history.AppendLine("Запрос пользователя:");
 
         Console.WriteLine($"Отправка запроса к модели: {models[model]}");
         Console.WriteLine($"Макс. токенов: {maxTokens}, Температура: {temperature}");
@@ -162,7 +170,8 @@ class Program
                 new()
                 {
                     Role = Role.User,
-                    Content = message,
+                    Content =
+                        $"Пользователь ввел новый запрос: {message}. Дай ответ, и если необходимо опирайся на историю запросов(она может быть пустой). В ответе не сообщай, что смотришь историю {history}",
                 },
             ],
             Model = models[model],
@@ -177,6 +186,9 @@ class Program
             Console.WriteLine("Ответ Claude:");
             Console.WriteLine(new string('-', 50));
             var a = JsonSerializer.Deserialize<ClaudeResponse>(response.Content.First().Json.GetRawText());
+            history.AppendLine("Ответ нейронки:");
+            history.AppendLine(a.Text);
+            await File.WriteAllTextAsync("history.txt", history.ToString());
             Console.WriteLine(a.Text);
             Console.WriteLine(new string('-', 50));
             var costs = new Dictionary<string, (decimal Input, decimal Output)>
