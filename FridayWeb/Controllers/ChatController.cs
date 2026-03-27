@@ -16,9 +16,9 @@ public class ChatController : ControllerBase
     }
 
     [HttpPost("message/send")]
-    public async Task<IActionResult> SendMessageAsync([FromQuery] string message)
+    public async Task<IActionResult> SendMessageAsync([FromBody] ABC abc)
     {
-        var response = await chatService.SendMessageAsync(message);
+        var response = await chatService.SendMessageAsync(abc.Message);
         return Ok(response);
     }
 
@@ -28,4 +28,9 @@ public class ChatController : ControllerBase
         await chatService.SaveSettingsAsync(settings);
         return Ok();
     }
+}
+
+public class ABC
+{
+    public string Message { get; set; }
 }

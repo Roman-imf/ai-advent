@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.Intrinsics.X86;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Anthropic;
@@ -33,8 +34,47 @@ public class FridayChatService : IFridayChatService
     public async Task<FridayResponse> SendMessageAsync(string message)
     {
         var settings = await _dbContext.Settings.FirstAsync();
-        var oldMessages = await _dbContext.Messages.ToListAsync();
+        var oldMessages = await _dbContext.Messages.AsNoTracking().ToListAsync().ConfigureAwait(false);
         var messages = new List<MessageParam>();
+        var lastSummarizationMessage =
+            oldMessages.Where(x => x.Summary != null).OrderBy(x => x.CreatedAt).LastOrDefault();
+        var messagesWithoutSummary =
+            oldMessages.Where(x => x.CreatedAt > (lastSummarizationMessage?.CreatedAt ?? DateTime.MinValue)).ToList();
+        if (messagesWithoutSummary.Count > 10)
+        {
+            var messagesToSummary = messagesWithoutSummary.SelectMany(x => new[]
+            {
+                new MessageParam()
+                {
+                    Role = Role.User,
+                    Content = x.Input,
+                },
+                new MessageParam()
+                {
+                    Role = Role.Assistant,
+                    Content = x.Output
+                }
+            }).Append(new MessageParam()
+            {
+                Role = Role.User,
+                Content = "Напиши короткое саммари предыдущих сообщений",
+            });
+            var summaryResponse = await _client.Messages.Create(new()
+            {
+                MaxTokens = settings.MaxTokens,
+                Temperature = (double)settings.Temperature,
+                Messages = messagesToSummary.ToList(),
+                Model = ModelIdMapping[settings.Model],
+            });
+            var a = messagesWithoutSummary.Last();
+            a.Summary = summaryResponse
+                .Content
+                .Select(x =>
+                    JsonSerializer.Deserialize<ClaudeResponse>(x.Json.GetRawText())).First().Text;
+            _dbContext.Messages.Update(a);
+            await _dbContext.SaveChangesAsync();
+        }
+
         foreach (var oldMessage in oldMessages)
         {
             messages.Add(new()
@@ -96,8 +136,7 @@ public class FridayChatService : IFridayChatService
         {
             Message = responseMessage,
             Cost = response.Usage.InputTokens * costs[settings.Model].Input +
-                   response.Usage.OutputTokens * costs[settings.Model].Output,
-            TokensUsed = response.Usage.InputTokens + response.Usage.OutputTokens
+                   response.Usage.OutputTokens * costs[settings.Model].Output
         };
     }
 

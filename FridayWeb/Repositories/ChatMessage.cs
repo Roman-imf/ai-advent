@@ -12,4 +12,6 @@ public class ChatMessage
     public LlmModel Model { get; set; }
     public DateTime CreatedAt { get; set; }
     public decimal ElapsedSeconds { get; set; }
+    
+    public string Summary { get; set; }
 }
