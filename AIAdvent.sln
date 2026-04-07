@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClaudeCLI", "ClaudeCLI\Clau
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Web", "Web\Web.csproj", "{2C6E6892-E202-4F43-BBAA-5D7FB6B15E5A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MCP", "MCP\MCP.csproj", "{2A367DE9-4962-49E6-9B91-554CE953E6BF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{2C6E6892-E202-4F43-BBAA-5D7FB6B15E5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2C6E6892-E202-4F43-BBAA-5D7FB6B15E5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2C6E6892-E202-4F43-BBAA-5D7FB6B15E5A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A367DE9-4962-49E6-9B91-554CE953E6BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A367DE9-4962-49E6-9B91-554CE953E6BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A367DE9-4962-49E6-9B91-554CE953E6BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A367DE9-4962-49E6-9B91-554CE953E6BF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
